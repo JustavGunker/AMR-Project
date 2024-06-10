@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "tilt.h"
+#include "uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -98,15 +99,27 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  int16_t axValue = 0;
+  int16_t ayValue = 0;
+  int16_t azValue = 0;
+  float ax = 0;
+  float ay = 0;
+  float az = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  uint8_t test = 42;
-    /* USER CODE END WHILE */
+	  error_stat = LSM9DS1_Read_Acceleration_X(&axValue);
+	  LSM9DS1_Read_Acceleration_Y(&ayValue);
+	  LSM9DS1_Read_Acceleration_Z(&azValue);
+	  ax = convAcc(axValue,-1.0);
+	  ay = convAcc(ayValue,-1.0);
+	  az = convAcc(azValue,-1.0);
+	  tilt = findTilt(ax,ay,az);
+
+	  /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
