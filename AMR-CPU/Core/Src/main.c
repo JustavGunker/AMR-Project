@@ -21,8 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include "tilt.h"
-#include "uart.h"
+#include "adc.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,7 +50,11 @@ SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+adc_t adc1, adc2, adc3;
 
+int ESC = 0x1B;
+char uart_buf[100];
+int uart_buf_len;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,7 +64,8 @@ static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void clrscr();
+void gotoxy(uint8_t x, uint8_t y);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -83,7 +90,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -99,27 +105,26 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  int16_t axValue = 0;
-  int16_t ayValue = 0;
-  int16_t azValue = 0;
-  float ax = 0;
-  float ay = 0;
-  float az = 0;
+  LSM9DS1_Init(&hspi1);
+  ADC_Init(&adc1,&adc2,&adc3);
+  double tilt = 0;
+  uint16_t adcVal = 0;
+  uint8_t reg;
+  int16_t acc[3];
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  error_stat = LSM9DS1_Read_Acceleration_X(&axValue);
-	  LSM9DS1_Read_Acceleration_Y(&ayValue);
-	  LSM9DS1_Read_Acceleration_Z(&azValue);
-	  ax = convAcc(axValue,-1.0);
-	  ay = convAcc(ayValue,-1.0);
-	  az = convAcc(azValue,-1.0);
-	  tilt = findTilt(ax,ay,az);
-
-	  /* USER CODE END WHILE */
+	  clrscr();
+	  gotoxy(0,0);
+	  tilt = getTilt(&hspi1);
+	  adcVal = LTC2452_Read(&hspi1, adc1);
+	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f\n Voltage: %4.3f",tilt,convVol(adcVal,3.3));
+	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+	  HAL_Delay(400);
+    /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -341,9 +346,6 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, CSAG_Pin|CS_LoRa_Pin|RST_LoRa_Pin|CSADC1_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(DataEnableAcc_GPIO_Port, DataEnableAcc_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, CSADC3_Pin|CSADC2_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : CSAG_Pin CS_LoRa_Pin RST_LoRa_Pin CSADC1_Pin */
@@ -353,11 +355,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DataEnableAcc_Pin CSADC3_Pin CSADC2_Pin */
-  GPIO_InitStruct.Pin = DataEnableAcc_Pin|CSADC3_Pin|CSADC2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pins : DEN_Acc_Pin INT1_Pin INT2_Pin */
+  GPIO_InitStruct.Pin = DEN_Acc_Pin|INT1_Pin|INT2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : DIO0_Pin */
@@ -366,10 +367,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : INT1_Pin INT2_Pin */
-  GPIO_InitStruct.Pin = INT1_Pin|INT2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pins : CSADC3_Pin CSADC2_Pin */
+  GPIO_InitStruct.Pin = CSADC3_Pin|CSADC2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -377,7 +379,14 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void clrscr(){
+  	 uart_buf_len = sprintf(uart_buf,"%c[2J",ESC);
+  	 HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+  }
+void gotoxy(uint8_t x, uint8_t y){
+  uart_buf_len = sprintf(uart_buf,"%c[%d;%dH",ESC,y + 1,x + 1);
+  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+}
 /* USER CODE END 4 */
 
 /**

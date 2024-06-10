@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -61,8 +61,8 @@ void Error_Handler(void);
 #define CSAG_GPIO_Port GPIOA
 #define CS_LoRa_Pin GPIO_PIN_4
 #define CS_LoRa_GPIO_Port GPIOA
-#define DataEnableAcc_Pin GPIO_PIN_0
-#define DataEnableAcc_GPIO_Port GPIOB
+#define DEN_Acc_Pin GPIO_PIN_0
+#define DEN_Acc_GPIO_Port GPIOB
 #define RST_LoRa_Pin GPIO_PIN_9
 #define RST_LoRa_GPIO_Port GPIOA
 #define DIO0_Pin GPIO_PIN_10
