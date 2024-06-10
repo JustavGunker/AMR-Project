@@ -105,7 +105,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  uint8_t test = 0;
+	  uint8_t test = 42;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
