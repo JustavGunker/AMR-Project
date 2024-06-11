@@ -58,9 +58,9 @@ void LSM9DS1_Write(SPI_HandleTypeDef* spi,uint8_t reg, uint8_t data) {
 	  float acc_ref = 1.0;
 	  int16_t accArray[3];
 	  LSM9DS1_Read_Acceleration(spi, accArray);
-	  float x = convAcc(accArray[0],acc_ref);
-	  float y = convAcc(accArray[1],acc_ref);
-	  float z = convAcc(accArray[2],acc_ref);
+	  float x = -1*convAcc(accArray[0],acc_ref);
+	  float y = -1*convAcc(accArray[1],acc_ref);
+	  float z = -1*convAcc(accArray[2],acc_ref);
 	  double temp = (double)((y)/sqrt((x*x)+(y*y)+(z*z)));
 	  return (acos(temp)*180)/M_PI;
   }

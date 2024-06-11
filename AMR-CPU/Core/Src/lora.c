@@ -8,9 +8,9 @@
 #include "lora.h"
 
 void LoRa_reset() {
-	HAL_GPIO_WritePin(GPIOA, RST_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin, GPIO_PIN_RESET);
 	HAL_Delay(10);
-	HAL_GPIO_WritePin(GPIOA, RST_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin, GPIO_PIN_SET);
 	HAL_Delay(10);
 }
 
@@ -18,14 +18,12 @@ void LoRa_reset() {
  * Writes byte to LoRa module
  * Syntax: LoRa_write_reg(hspi1, &address, &data)
  */
-void LoRa_write_reg(SPI_HandleTypeDef spi, uint8_t* address, uint8_t* data) {
-	uint8_t tx_addr = (*address) | 0x80;
+void LoRa_write_reg(SPI_HandleTypeDef* spi, uint8_t address, uint8_t data) {
+	uint8_t tx = {address | 0x80,data};
 
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_RESET);
 
-	HAL_SPI_Transmit(&spi, &tx_addr, 1, HAL_MAX_DELAY);
-
-	HAL_SPI_Transmit(&spi, data, 1, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(spi, tx, 2, HAL_MAX_DELAY);
 
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_SET);
 }
@@ -35,7 +33,7 @@ void LoRa_write_reg(SPI_HandleTypeDef spi, uint8_t* address, uint8_t* data) {
  * Read byte from LoRa module and returns value
  * Syntax: x = LoRa_read_reg(hspi1, address)
  */
-uint8_t LoRa_read_reg(SPI_HandleTypeDef spi, uint8_t address) {
+uint8_t LoRa_read_reg(SPI_HandleTypeDef* spi, uint8_t address) {
 	uint8_t txData[2] = {address, 0};
 	uint8_t rxData[2] = {0, 0};
 	uint8_t data;
@@ -43,7 +41,7 @@ uint8_t LoRa_read_reg(SPI_HandleTypeDef spi, uint8_t address) {
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_RESET);
 	HAL_Delay(10);
 
-	HAL_SPI_TransmitReceive(&spi, txData, rxData, 2, HAL_MAX_DELAY);
+	HAL_SPI_TransmitReceive(spi, txData, rxData, 2, HAL_MAX_DELAY);
 
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_SET);
 	HAL_Delay(10);
@@ -54,7 +52,7 @@ uint8_t LoRa_read_reg(SPI_HandleTypeDef spi, uint8_t address) {
 /*
  * Fills FiFo register (0x00) with data, and sets payload length to number of bytes
  */
-void LoRa_fill_fifo(SPI_HandleTypeDef spi, uint8_t* data, uint8_t bytes) {
+void LoRa_fill_fifo(SPI_HandleTypeDef* spi, char* data, uint8_t bytes) {
 	uint8_t payload_len_addr = RegPayloadLength;
 	uint8_t tx_addr = RegFiFo | 0x80;
 
@@ -63,10 +61,10 @@ void LoRa_fill_fifo(SPI_HandleTypeDef spi, uint8_t* data, uint8_t bytes) {
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_RESET);
 	HAL_Delay(10);
 
-	HAL_SPI_Transmit(&spi, &tx_addr, 1, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(spi, &tx_addr, 1, HAL_MAX_DELAY);
 
 	for (int i = 0; i < bytes; i++) {
-		HAL_SPI_Transmit(&spi, data + i, 1, HAL_MAX_DELAY);
+		HAL_SPI_Transmit(spi, data + i, 1, HAL_MAX_DELAY);
 	}
 
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_SET);
@@ -76,7 +74,7 @@ void LoRa_fill_fifo(SPI_HandleTypeDef spi, uint8_t* data, uint8_t bytes) {
 /*
  * Sets device modes. See header for different modes
  */
-void LoRa_set_mode(SPI_HandleTypeDef spi, uint8_t mode) {
+void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode) {
 	uint8_t addr;
 	uint8_t read;
 	uint8_t data;
@@ -92,7 +90,7 @@ void LoRa_set_mode(SPI_HandleTypeDef spi, uint8_t mode) {
 /*
  * Initialization of LoRa module. Sleep mode -> LoRa mode -> Stdby mode
  */
-void LoRa_init(SPI_HandleTypeDef spi) {
+void LoRa_init(SPI_HandleTypeDef* spi) {
 	uint8_t addr = RegOpMode;
 	uint8_t data;
 	uint8_t read;
@@ -109,7 +107,7 @@ void LoRa_init(SPI_HandleTypeDef spi) {
 	HAL_Delay(10);
 }
 
-char LoRa_read_payload(SPI_HandleTypeDef spi, char* data) {
+void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 	uint8_t irqReg, nBytes, FIFOaddr, i, RxDone, validHeader, addr, int_data;
 	char dataReg[50];
 
@@ -127,7 +125,7 @@ char LoRa_read_payload(SPI_HandleTypeDef spi, char* data) {
 		if (validHeader) {
 			addr = 0x12;
 			int_data = irqReg & 0x10;
-			Lora_write_reg(spi, &addr, &data);
+			LoRa_write_reg(spi, &addr, &data);
 
 			irqReg = LoRa_read_reg(spi, addr);
 
@@ -142,7 +140,7 @@ char LoRa_read_payload(SPI_HandleTypeDef spi, char* data) {
 
 			addr = 0x00;
 			for (i = 0; i < nBytes; i++) {
-				dataReg[i] = LoRa_read_reg(addr);
+				dataReg[i] = LoRa_read_reg(spi,addr);
 			}
 
 			data = dataReg;

@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "tilt.h"
 #include "adc.h"
+#include "lora.h"
 
 /* USER CODE END Includes */
 
@@ -54,7 +55,7 @@ adc_t adc1, adc2, adc3;
 
 int ESC = 0x1B;
 char uart_buf[100];
-int uart_buf_len;
+uint8_t uart_buf_len;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,10 +107,15 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   LSM9DS1_Init(&hspi1);
-  ADC_Init(&adc1,&adc2,&adc3);
+  //ADC_Init(&adc1,&adc2,&adc3);
+  LoRa_reset();
+  LoRa_init(&hspi1);
   double tilt = 0;
+  uint8_t i = 10;
   uint16_t adcVal = 0;
   uint8_t reg;
+  uint8_t data = 0x08;
+  uint8_t addr = 0x12;
   int16_t acc[3];
   /* USER CODE END 2 */
 
@@ -121,8 +127,16 @@ int main(void)
 	  gotoxy(0,0);
 	  tilt = getTilt(&hspi1);
 	  adcVal = LTC2452_Read(&hspi1, adc1);
-	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f\n Voltage: %4.3f",tilt,convVol(adcVal,3.3));
+	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f",tilt);
 	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+	  while(i){
+		  LoRa_fill_fifo(&hspi1, uart_buf, uart_buf_len);
+		  LoRa_set_mode(&hspi1, tx_mode);
+		  if(LoRa_read_reg(&hspi1, addr) & 0x08){
+			  LoRa_write_reg(&hspi1,&addr,&data);
+		  }
+		  i--;
+	  }
 	  HAL_Delay(400);
     /* USER CODE END WHILE */
 

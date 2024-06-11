@@ -20,7 +20,6 @@ uint16_t LTC2452_Read(SPI_HandleTypeDef* spi, adc_t adc) {
       uint8_t rxData[2] = {0,0}; // 2 bytes to be recieved
 
 
-      //txData[0] = 0x00; // Dummy byte to trigger conversion
       HAL_GPIO_WritePin(adc.Port, adc.Pin, GPIO_PIN_RESET); // Pull CS pin low
       HAL_Delay(10); // Small delay for setup
       HAL_SPI_Receive(spi,rxData,2,HAL_MAX_DELAY);
