@@ -49,6 +49,6 @@ uint8_t LoRa_read_reg(SPI_HandleTypeDef* spi, uint8_t address);
 void LoRa_fill_fifo(SPI_HandleTypeDef* spi, char* data, uint8_t bytes);
 void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode);
 void LoRa_init(SPI_HandleTypeDef* spi);
-char* LoRa_read_payload(SPI_HandleTypeDef* spi);
+void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data);
 
 #endif /* INC_LORA_H_ */

@@ -116,7 +116,7 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 	LoRa_write_reg(spi, RegModemConfig1, read);
 }
 
-char* LoRa_read_payload(SPI_HandleTypeDef* spi) {
+void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 	uint8_t irqReg, nBytes, FIFOaddr, i, RxDone, validHeader;
 
 	irqReg = LoRa_read_reg(spi, 0x12);
@@ -152,7 +152,7 @@ char* LoRa_read_payload(SPI_HandleTypeDef* spi) {
 				data_reg[i] = LoRa_read_reg(spi, 0x00);
 			}
 
-			return data_reg;
+			data = data_reg;
 		}
 	}
 
