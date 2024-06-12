@@ -123,7 +123,7 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 	LoRa_write_reg(spi, RegModemConfig1, read);
 }
 
-void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
+void LoRa_read_payload(SPI_HandleTypeDef* spi, char *data) {
 	uint8_t irqReg, nBytes, FIFOaddr, i, RxDone, validHeader;
 
 	irqReg = LoRa_read_reg(spi, 0x12);
@@ -139,7 +139,7 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 		if (validHeader) {
 			if (irqReg & 0x20) {
 				LoRa_write_reg(spi, 0x12, irqReg & 0x20);
-				return;
+				return "CRC error";
 			}
 
 			LoRa_write_reg(spi, 0x12, irqReg & 0x10);
@@ -150,7 +150,7 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 
 			FIFOaddr = LoRa_read_reg(spi, 0x10);
 
-			char data_reg[nBytes];
+			char *data_reg = (char *)malloc(nBytes*sizeof(char));
 
 			LoRa_write_reg(spi, 0x0D, FIFOaddr);
 
@@ -158,7 +158,11 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 				data_reg[i] = LoRa_read_reg(spi, 0x00);
 			}
 
-			data = data_reg;
+			strncpy(data,data_reg, nBytes);
+			data[nBytes] = '\0';
+
+			free(data_reg);
+
 		}
 	}
 
