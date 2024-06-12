@@ -6,6 +6,7 @@
  */
 
 #include "lora.h"
+#include "math.h"
 
 void LoRa_reset() {
 	HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin, GPIO_PIN_SET);
