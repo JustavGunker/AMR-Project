@@ -112,25 +112,25 @@ int main(void)
   LoRa_reset();
   LoRa_init(&hspi1);
   double tilt = 0;
-  uint8_t i = 25;
+  uint8_t i = 2;
   uint16_t adcVal = 0;
   uint8_t reg;
   uint8_t data = 0x08;
   uint8_t addr = 0x12;
   int16_t acc[3];
-  char* txt = "";
+  char* txt = "test";
+  clrscr();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  clrscr();
 	  gotoxy(0,0);
-	  tilt = getTilt(&hspi1);
+	  /*tilt = getTilt(&hspi1);
 	  //adcVal = LTC2452_Read(&hspi1, adc1);
 	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f, Reg: %d",tilt,LoRa_read_reg(&hspi1,0x01));
-	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);*/
 	  txt = uart_buf;
 	  while(i){
 		  LoRa_fill_fifo(&hspi1, txt, strlen(txt));
@@ -143,7 +143,7 @@ int main(void)
 		  }
 		  i--;
 	  }
-	  HAL_Delay(400);
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
