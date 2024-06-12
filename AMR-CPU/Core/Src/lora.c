@@ -102,13 +102,14 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 	ptrBase = LoRa_read_reg(spi,RegFiFoTxBaseAddr);
 	LoRa_write_reg(spi,RegFiFoAddPtr,ptrBase); // Change FiFo pointer to FiFo base adress
 
+
+
 	LoRa_set_mode(spi, sleep_mode);
 	HAL_Delay(10);
 
-	//set frequency
-	LoRa_write_reg(spi, RegFrMsb, 0xD9);
-	LoRa_write_reg(spi, RegFrMid, 0x00);
-	LoRa_write_reg(spi, RegFrLsb, 0x00);
+	// change frequency to 433 MHz
+	LoRa_write_reg(spi,RegFrMsb,0x6C); //MSB
+	LoRa_write_reg(spi,RegFrMid,0x40); //MIB
 
 	//enter LoRa mode
 	data = (LoRa_read_reg(spi, addr)) | 0x80; //set bit 7 to 1;
@@ -117,6 +118,11 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 
 	LoRa_set_mode(spi, stdby_mode);
 	HAL_Delay(10);
+
+	//set frequency
+	LoRa_write_reg(spi, RegFrMsb, 0xD9);
+	LoRa_write_reg(spi, RegFrMid, 0x00);
+	LoRa_write_reg(spi, RegFrLsb, 0x00);
 
 	//crc
 	read = LoRa_read_reg(spi, RegModemConfig1) | 0x02;

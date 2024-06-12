@@ -119,7 +119,7 @@ int main(void)
   uint8_t data = 0x08;
   uint8_t addr = 0x12;
   int16_t acc[3];
-  char* txt = "test";
+  char* txt = "Kæmpe amogus";
   clrscr();
 
   reg = LoRa_read_reg(&hspi1, RegFiFoTxBaseAddr);
