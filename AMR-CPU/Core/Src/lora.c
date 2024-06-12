@@ -8,9 +8,9 @@
 #include "lora.h"
 
 void LoRa_reset() {
-	HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin, GPIO_PIN_RESET);
-	HAL_Delay(10);
 	HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin, GPIO_PIN_SET);
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin, GPIO_PIN_RESET);
 	HAL_Delay(10);
 }
 
