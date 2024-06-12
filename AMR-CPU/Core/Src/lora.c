@@ -117,11 +117,19 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 
 	LoRa_set_mode(spi, stdby_mode);
 	HAL_Delay(10);
+
+	//set frequency
+	LoRa_write_reg(spi, RegFrMsb, 0xD9);
+	LoRa_write_reg(spi, RegFrMid, 0x00);
+	LoRa_write_reg(spi, RegFrLsb, 0x00);
+
+	//crc
+	read = LoRa_read_reg(spi, RegModemConfig1) | 0x02;
+	LoRa_write_reg(spi, RegModemConfig1, read);
 }
 
-void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
-	uint8_t irqReg, nBytes, FIFOaddr, i, RxDone, validHeader, addr, int_data;
-	char dataReg[50];
+char* LoRa_read_payload(SPI_HandleTypeDef* spi) {
+	uint8_t irqReg, nBytes, FIFOaddr, i, RxDone, validHeader;
 
 	irqReg = LoRa_read_reg(spi, 0x12);
 	RxDone, validHeader = 0;
@@ -129,33 +137,33 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 	RxDone = irqReg & 0x40;
 
 	if (RxDone) {
-		addr = 0x12;
-		int_data = irqReg & 0x40;
-		LoRa_write_reg(spi, addr, int_data);
+		LoRa_write_reg(spi, 0x12, irqReg & 0x40);
+		irqReg = LoRa_read_reg(spi, 0x12);
 		validHeader = irqReg & 0x10;
 
 		if (validHeader) {
-			addr = 0x12;
-			int_data = irqReg & 0x10;
-			LoRa_write_reg(spi, addr, data);
-
-			irqReg = LoRa_read_reg(spi, addr);
-
-			addr = 0x13;
-			nBytes = LoRa_read_reg(spi, addr);
-
-			addr = 0x10;
-			FIFOaddr = LoRa_read_reg(spi, addr);
-
-			addr = 0x0D;
-			LoRa_write_reg(spi, addr, FIFOaddr);
-
-			addr = 0x00;
-			for (i = 0; i < nBytes; i++) {
-				dataReg[i] = LoRa_read_reg(spi,addr);
+			if (irqReg & 0x20) {
+				LoRa_write_reg(spi, 0x12, irqReg & 0x20);
+				return;
 			}
 
-			data = dataReg;
+			LoRa_write_reg(spi, 0x12, irqReg & 0x10);
+
+			irqReg = LoRa_read_reg(spi, 0x12);
+
+			nBytes = LoRa_read_reg(spi, 0x13);
+
+			FIFOaddr = LoRa_read_reg(spi, 0x10);
+
+			char data_reg[nBytes];
+
+			LoRa_write_reg(spi, 0x0D, FIFOaddr);
+
+			for (i = 0; i < nBytes; i++) {
+				data_reg[i] = LoRa_read_reg(spi, 0x00);
+			}
+
+			return data_reg;
 		}
 	}
 
