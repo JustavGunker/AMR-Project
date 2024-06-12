@@ -44,9 +44,9 @@
 #define rx_single_mode		6
 
 void LoRa_reset();
-void LoRa_write_reg(SPI_HandleTypeDef* spi, uint8_t* address, uint8_t* data);
+void LoRa_write_reg(SPI_HandleTypeDef* spi, uint8_t address, uint8_t data);
 uint8_t LoRa_read_reg(SPI_HandleTypeDef* spi, uint8_t address);
-void LoRa_fill_fifo(SPI_HandleTypeDef* spi, char* data, uint8_t bytes);
+void LoRa_fill_fifo(SPI_HandleTypeDef* spi, uint8_t* data, uint8_t bytes);
 void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode);
 void LoRa_init(SPI_HandleTypeDef* spi);
 void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data);

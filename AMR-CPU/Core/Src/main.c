@@ -25,6 +25,7 @@
 #include "tilt.h"
 #include "adc.h"
 #include "lora.h"
+#include "string.h"
 
 /* USER CODE END Includes */
 
@@ -111,12 +112,13 @@ int main(void)
   LoRa_reset();
   LoRa_init(&hspi1);
   double tilt = 0;
-  uint8_t i = 10;
+  uint8_t i = 25;
   uint16_t adcVal = 0;
   uint8_t reg;
   uint8_t data = 0x08;
   uint8_t addr = 0x12;
   int16_t acc[3];
+  char* txt = "";
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -126,14 +128,18 @@ int main(void)
 	  clrscr();
 	  gotoxy(0,0);
 	  tilt = getTilt(&hspi1);
-	  adcVal = LTC2452_Read(&hspi1, adc1);
-	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f",tilt);
+	  //adcVal = LTC2452_Read(&hspi1, adc1);
+	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f, Reg: %d",tilt,LoRa_read_reg(&hspi1,0x01));
 	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+	  txt = uart_buf;
 	  while(i){
-		  LoRa_fill_fifo(&hspi1, uart_buf, uart_buf_len);
+		  LoRa_fill_fifo(&hspi1, txt, strlen(txt));
 		  LoRa_set_mode(&hspi1, tx_mode);
 		  if(LoRa_read_reg(&hspi1, addr) & 0x08){
-			  LoRa_write_reg(&hspi1,&addr,&data);
+			  LoRa_write_reg(&hspi1,addr,0x08);
+			  HAL_Delay(10);
+			  uart_buf_len = sprintf(uart_buf,"\n Data sent, Fifo: %d", LoRa_read_reg(&hspi1, 0x00));
+			  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
 		  }
 		  i--;
 	  }

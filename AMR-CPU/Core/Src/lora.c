@@ -19,7 +19,7 @@ void LoRa_reset() {
  * Syntax: LoRa_write_reg(hspi1, &address, &data)
  */
 void LoRa_write_reg(SPI_HandleTypeDef* spi, uint8_t address, uint8_t data) {
-	uint8_t tx = {address | 0x80,data};
+	uint8_t tx[2] = {address | 0x80,data};
 
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_RESET);
 
@@ -52,11 +52,12 @@ uint8_t LoRa_read_reg(SPI_HandleTypeDef* spi, uint8_t address) {
 /*
  * Fills FiFo register (0x00) with data, and sets payload length to number of bytes
  */
-void LoRa_fill_fifo(SPI_HandleTypeDef* spi, char* data, uint8_t bytes) {
+void LoRa_fill_fifo(SPI_HandleTypeDef* spi, uint8_t* data, uint8_t bytes) {
 	uint8_t payload_len_addr = RegPayloadLength;
 	uint8_t tx_addr = RegFiFo | 0x80;
 
-	LoRa_write_reg(spi, &payload_len_addr, &bytes);
+
+	LoRa_write_reg(spi, payload_len_addr, bytes);
 
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_RESET);
 	HAL_Delay(10);
@@ -80,11 +81,11 @@ void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode) {
 	uint8_t data;
 
 	addr = RegOpMode;
-	read = LoRa_read_reg(spi, RegOpMode);
+	read = LoRa_read_reg(spi, addr);
 
 	data = (read & 0xF8) | mode;
 
-	LoRa_write_reg(spi, &addr, &data);
+	LoRa_write_reg(spi, addr, data);
 }
 
 /*
@@ -94,13 +95,24 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 	uint8_t addr = RegOpMode;
 	uint8_t data;
 	uint8_t read;
+	uint8_t ptrBase;
+
+	LoRa_write_reg(spi,RegFiFoTxBaseAddr,0x00);
+	ptrBase = LoRa_read_reg(spi,RegFiFoTxBaseAddr);
+	LoRa_write_reg(spi,RegFiFoAddPtr,ptrBase); // Change FiFo pointer to FiFo base adress
+
+
 
 	LoRa_set_mode(spi, sleep_mode);
 	HAL_Delay(10);
 
+	// change frequency to 433 MHz
+	LoRa_write_reg(spi,RegFrMsb,0x6C); //MSB
+	LoRa_write_reg(spi,RegFrMid,0x40); //MIB
+
 	//enter LoRa mode
-	data = (LoRa_read_reg(spi, addr)) | 0x80; //set bit 8 to 1;
-	LoRa_write_reg(spi, &addr, &data);
+	data = (LoRa_read_reg(spi, addr)) | 0x80; //set bit 7 to 1;
+	LoRa_write_reg(spi, addr, data);
 	HAL_Delay(10);
 
 	LoRa_set_mode(spi, stdby_mode);
@@ -119,13 +131,13 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 	if (RxDone) {
 		addr = 0x12;
 		int_data = irqReg & 0x40;
-		LoRa_write_reg(spi, &addr, &int_data);
+		LoRa_write_reg(spi, addr, int_data);
 		validHeader = irqReg & 0x10;
 
 		if (validHeader) {
 			addr = 0x12;
 			int_data = irqReg & 0x10;
-			LoRa_write_reg(spi, &addr, &data);
+			LoRa_write_reg(spi, addr, data);
 
 			irqReg = LoRa_read_reg(spi, addr);
 
@@ -136,7 +148,7 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char* data) {
 			FIFOaddr = LoRa_read_reg(spi, addr);
 
 			addr = 0x0D;
-			LoRa_write_reg(spi, &addr, &FIFOaddr);
+			LoRa_write_reg(spi, addr, FIFOaddr);
 
 			addr = 0x00;
 			for (i = 0; i < nBytes; i++) {
