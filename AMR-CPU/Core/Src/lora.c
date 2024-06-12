@@ -6,7 +6,6 @@
  */
 
 #include "lora.h"
-#include "stdio.h"
 
 
 void LoRa_reset() {
