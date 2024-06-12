@@ -63,12 +63,16 @@ void Error_Handler(void);
 #define CS_LoRa_GPIO_Port GPIOA
 #define DEN_Acc_Pin GPIO_PIN_0
 #define DEN_Acc_GPIO_Port GPIOB
+#define TX_Pin GPIO_PIN_8
+#define TX_GPIO_Port GPIOA
 #define RST_LoRa_Pin GPIO_PIN_9
 #define RST_LoRa_GPIO_Port GPIOA
 #define DIO0_Pin GPIO_PIN_10
 #define DIO0_GPIO_Port GPIOA
 #define CSADC1_Pin GPIO_PIN_11
 #define CSADC1_GPIO_Port GPIOA
+#define RX_Pin GPIO_PIN_12
+#define RX_GPIO_Port GPIOA
 #define CSADC3_Pin GPIO_PIN_4
 #define CSADC3_GPIO_Port GPIOB
 #define CSADC2_Pin GPIO_PIN_5

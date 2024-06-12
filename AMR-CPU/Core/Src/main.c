@@ -111,6 +111,7 @@ int main(void)
   //ADC_Init(&adc1,&adc2,&adc3);
   LoRa_reset();
   LoRa_init(&hspi1);
+  HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET); // Set to TX mode
   double tilt = 0;
   uint8_t i = 2;
   uint16_t adcVal = 0;
@@ -120,6 +121,11 @@ int main(void)
   int16_t acc[3];
   char* txt = "test";
   clrscr();
+
+  reg = LoRa_read_reg(&hspi1, RegFiFoTxBaseAddr);
+  LoRa_write_reg(&hspi1,RegFiFoAddPtr,reg);
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -131,17 +137,19 @@ int main(void)
 	  //adcVal = LTC2452_Read(&hspi1, adc1);
 	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f, Reg: %d",tilt,LoRa_read_reg(&hspi1,0x01));
 	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);*/
-	  txt = uart_buf;
+	  //txt = uart_buf;
 	  while(i){
 		  LoRa_fill_fifo(&hspi1, txt, strlen(txt));
 		  LoRa_set_mode(&hspi1, tx_mode);
+		  HAL_Delay(50);
 		  if(LoRa_read_reg(&hspi1, addr) & 0x08){
 			  LoRa_write_reg(&hspi1,addr,0x08);
 			  HAL_Delay(10);
-			  uart_buf_len = sprintf(uart_buf,"\n Data sent, Fifo: %d", LoRa_read_reg(&hspi1, 0x00));
+			  uart_buf_len = sprintf(uart_buf,"\n\r Data sent, RegOpMode: %d", LoRa_read_reg(&hspi1, 0x01));
 			  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
 		  }
 		  i--;
+		  HAL_Delay(2500);
 	  }
 	  HAL_Delay(500);
     /* USER CODE END WHILE */
@@ -366,10 +374,15 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, CSAG_Pin|CS_LoRa_Pin|RST_LoRa_Pin|CSADC1_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, TX_Pin|RX_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, CSADC3_Pin|CSADC2_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : CSAG_Pin CS_LoRa_Pin RST_LoRa_Pin CSADC1_Pin */
-  GPIO_InitStruct.Pin = CSAG_Pin|CS_LoRa_Pin|RST_LoRa_Pin|CSADC1_Pin;
+  /*Configure GPIO pins : CSAG_Pin CS_LoRa_Pin TX_Pin RST_LoRa_Pin
+                           CSADC1_Pin RX_Pin */
+  GPIO_InitStruct.Pin = CSAG_Pin|CS_LoRa_Pin|TX_Pin|RST_LoRa_Pin
+                          |CSADC1_Pin|RX_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
