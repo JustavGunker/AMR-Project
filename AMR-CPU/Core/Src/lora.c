@@ -91,6 +91,8 @@ void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode) {
 	if(mode == tx_mode){
 		HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_RESET);
+		read = LoRa_read_reg(spi, RegFiFoTxBaseAddr);
+		LoRa_write_reg(spi,RegFiFoAddPtr,read);
 	} else if(mode == rx_cont_mode){
 		HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_SET);

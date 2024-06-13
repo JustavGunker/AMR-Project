@@ -55,7 +55,7 @@ UART_HandleTypeDef huart2;
 adc_t adc1, adc2, adc3;
 
 int ESC = 0x1B;
-char uart_buf[100];
+char uart_buf[256];
 uint8_t uart_buf_len;
 /* USER CODE END PV */
 
@@ -119,11 +119,11 @@ int main(void)
   uint8_t data = 0x08;
   uint8_t addr = 0x12;
   int16_t acc[3];
-  char* txt = "Kæmpe amogus";
+  char* txt = "1";
+  char rx_data[100];
   clrscr();
 
-  reg = LoRa_read_reg(&hspi1, RegFiFoTxBaseAddr);
-  LoRa_write_reg(&hspi1,RegFiFoAddPtr,reg);
+
 
 
   /* USER CODE END 2 */
@@ -153,7 +153,15 @@ int main(void)
 		  }
 		  i--;
 		  HAL_Delay(2500);
+		  clrscr();
 	  }
+	  LoRa_set_mode(&hspi1, rx_cont_mode);
+	  LoRa_read_payload(&hspi1, rx_data);
+	  if(LoRa_read_reg(&hspi1, 0x12) & 0x40){
+		  uart_buf_len = sprintf(uart_buf,"Message received: %s", rx_data);
+		  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+	  }
+
 	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
