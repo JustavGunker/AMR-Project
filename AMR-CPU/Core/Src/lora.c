@@ -56,9 +56,12 @@ uint8_t LoRa_read_reg(SPI_HandleTypeDef* spi, uint8_t address) {
 void LoRa_fill_fifo(SPI_HandleTypeDef* spi, uint8_t* data, uint8_t bytes) {
 	uint8_t payload_len_addr = RegPayloadLength;
 	uint8_t tx_addr = RegFiFo | 0x80;
+	uint8_t read;
 
 
 	LoRa_write_reg(spi, payload_len_addr, bytes);
+	read = LoRa_read_reg(spi, RegFiFoTxBaseAddr);
+	LoRa_write_reg(spi,RegFiFoAddPtr,read);
 
 	HAL_GPIO_WritePin(GPIOA, CS_LoRa_Pin, GPIO_PIN_RESET);
 	HAL_Delay(10);
@@ -81,6 +84,7 @@ void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode) {
 	uint8_t read;
 	uint8_t data;
 
+
 	addr = RegOpMode;
 	read = LoRa_read_reg(spi, addr);
 
@@ -88,15 +92,7 @@ void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode) {
 
 	LoRa_write_reg(spi, addr, data);
 
-	if(mode == tx_mode){
-		HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_RESET);
-		read = LoRa_read_reg(spi, RegFiFoTxBaseAddr);
-		LoRa_write_reg(spi,RegFiFoAddPtr,read);
-	} else if(mode == rx_cont_mode){
-		HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_SET);
-	}
+
 }
 
 /*
@@ -179,5 +175,11 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char *data) {
 		}
 	}
 
+}
+
+void toggle_pins(SPI_HandleTypeDef* spi){
+	HAL_GPIO_TogglePin(GPIOA, TX_Pin);
+	HAL_GPIO_TogglePin(GPIOA, RX_Pin);
+	HAL_Delay(1000);
 }
 

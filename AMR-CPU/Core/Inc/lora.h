@@ -9,6 +9,9 @@
 #define INC_LORA_H_
 
 #include "main.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define RegFiFo					0x00
 #define RegOpMode				0x01
@@ -50,5 +53,6 @@ void LoRa_fill_fifo(SPI_HandleTypeDef* spi, uint8_t* data, uint8_t bytes);
 void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode);
 void LoRa_init(SPI_HandleTypeDef* spi);
 void LoRa_read_payload(SPI_HandleTypeDef* spi, char *data);
+void toggle_pins(SPI_HandleTypeDef* spi);
 
 #endif /* INC_LORA_H_ */

@@ -25,7 +25,7 @@
 #include "tilt.h"
 #include "adc.h"
 #include "lora.h"
-#include "string.h"
+
 
 /* USER CODE END Includes */
 
@@ -111,9 +111,14 @@ int main(void)
   //ADC_Init(&adc1,&adc2,&adc3);
   LoRa_reset();
   LoRa_init(&hspi1);
-  //HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET); // Set to TX mode
+
+  //HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);
+  //HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_RESET);
+
+
+
   double tilt = 0;
-  uint8_t i = 2;
+  uint8_t i = 3;
   uint16_t adcVal = 0;
   uint8_t reg;
   uint8_t data = 0x08;
@@ -123,6 +128,9 @@ int main(void)
   char rx_data[100];
   clrscr();
 
+  HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_RESET);
+  HAL_Delay(500);
 
 
 
@@ -155,10 +163,14 @@ int main(void)
 		  HAL_Delay(2500);
 		  clrscr();
 	  }
+	  /*LoRa_set_mode(&hspi1,sleep_mode);
+	  HAL_Delay(10);
+	  LoRa_set_mode(&hspi1,stdby_mode);*/
+	  toggle_pins(&hspi1);
 	  LoRa_set_mode(&hspi1, rx_cont_mode);
-	  LoRa_read_payload(&hspi1, rx_data);
 	  if(LoRa_read_reg(&hspi1, 0x12) & 0x40){
-		  uart_buf_len = sprintf(uart_buf,"Message received: %s", rx_data);
+		  LoRa_read_payload(&hspi1, rx_data);
+		  uart_buf_len = sprintf(uart_buf,"Message received: Bytes: %d, string: %s",LoRa_read_reg(&hspi1, 0x13), rx_data);
 		  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
 	  }
 
