@@ -87,6 +87,14 @@ void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode) {
 	data = (read & 0xF8) | mode;
 
 	LoRa_write_reg(spi, addr, data);
+
+	if(mode == tx_mode){
+		HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_RESET);
+	} else if(mode == rx_cont_mode){
+		HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_SET);
+	}
 }
 
 /*
@@ -107,9 +115,6 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 	LoRa_set_mode(spi, sleep_mode);
 	HAL_Delay(10);
 
-	// change frequency to 433 MHz
-	LoRa_write_reg(spi,RegFrMsb,0x6C); //MSB
-	LoRa_write_reg(spi,RegFrMid,0x40); //MIB
 
 	//enter LoRa mode
 	data = (LoRa_read_reg(spi, addr)) | 0x80; //set bit 7 to 1;
@@ -173,3 +178,4 @@ void LoRa_read_payload(SPI_HandleTypeDef* spi, char *data) {
 	}
 
 }
+

@@ -107,11 +107,11 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  LSM9DS1_Init(&hspi1);
+  //LSM9DS1_Init(&hspi1);
   //ADC_Init(&adc1,&adc2,&adc3);
   LoRa_reset();
   LoRa_init(&hspi1);
-  HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET); // Set to TX mode
+  //HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET); // Set to TX mode
   double tilt = 0;
   uint8_t i = 2;
   uint16_t adcVal = 0;
@@ -138,6 +138,9 @@ int main(void)
 	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f, Reg: %d",tilt,LoRa_read_reg(&hspi1,0x01));
 	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);*/
 	  //txt = uart_buf;
+
+	  uart_buf_len = sprintf(uart_buf,"Reg: %d \n\r",LoRa_read_reg(&hspi1,RegOpMode));
+	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
 	  while(i){
 		  LoRa_fill_fifo(&hspi1, txt, strlen(txt));
 		  LoRa_set_mode(&hspi1, tx_mode);
@@ -408,6 +411,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
+  HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin,GPIO_PIN_SET);
 /* USER CODE END MX_GPIO_Init_2 */
 }
 
