@@ -31,7 +31,9 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+adc_t adc1;
+adc_t adc2;
+adc_t adc3;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -49,14 +51,9 @@ ADC_HandleTypeDef hadc1;
 
 SPI_HandleTypeDef hspi1;
 
-UART_HandleTypeDef huart2;
-
 /* USER CODE BEGIN PV */
-adc_t adc1, adc2, adc3;
 
-int ESC = 0x1B;
-char uart_buf[256];
-uint8_t uart_buf_len;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,10 +61,10 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-void clrscr();
-void gotoxy(uint8_t x, uint8_t y);
+float read_battery(ADC_HandleTypeDef *hadc);
+void transmit_data(SPI_HandleTypeDef* spi, char* data);
+void get_measurements(SPI_HandleTypeDef* spi, adc_t adcx, adc_t adcy, adc_t adcz, char* data);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -105,32 +102,20 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_SPI1_Init();
-  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  //LSM9DS1_Init(&hspi1);
-  //ADC_Init(&adc1,&adc2,&adc3);
-  LoRa_reset();
+  HAL_PWREx_EnableLowPowerRunMode(); // enable low power run
+  LSM9DS1_Init(&hspi1);
+  ADC_Init(&adc1,&adc2,&adc3);
+  //LoRa_reset();
   LoRa_init(&hspi1);
 
-  //HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);
-  //HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);  // Enable TX path
+  HAL_GPIO_WritePin(GPIOA, RX_Pin,GPIO_PIN_RESET); // Disable RX path
 
 
-
-  double tilt = 0;
-  uint8_t i = 3;
-  uint16_t adcVal = 0;
-  uint8_t reg;
-  uint8_t data = 0x08;
-  uint8_t addr = 0x12;
-  int16_t acc[3];
-  char* txt = "1";
-  char rx_data[100];
-  clrscr();
-
-  HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOA,RX_Pin,GPIO_PIN_RESET);
-  HAL_Delay(500);
+  char tx_data[100];
+  float battery;
+  uint8_t low_battery = 0;
 
 
 
@@ -140,41 +125,22 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  gotoxy(0,0);
-	  /*tilt = getTilt(&hspi1);
-	  //adcVal = LTC2452_Read(&hspi1, adc1);
-	  uart_buf_len = sprintf(uart_buf,"Tilt: %4.2f, Reg: %d",tilt,LoRa_read_reg(&hspi1,0x01));
-	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);*/
-	  //txt = uart_buf;
+	  battery = read_battery(&hadc1);
 
-	  uart_buf_len = sprintf(uart_buf,"Reg: %d \n\r",LoRa_read_reg(&hspi1,RegOpMode));
-	  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
-	  while(i){
-		  LoRa_fill_fifo(&hspi1, txt, strlen(txt));
-		  LoRa_set_mode(&hspi1, tx_mode);
-		  HAL_Delay(50);
-		  if(LoRa_read_reg(&hspi1, addr) & 0x08){
-			  LoRa_write_reg(&hspi1,addr,0x08);
-			  HAL_Delay(10);
-			  uart_buf_len = sprintf(uart_buf,"\n\r Data sent, RegOpMode: %d", LoRa_read_reg(&hspi1, 0x01));
-			  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
-		  }
-		  i--;
-		  HAL_Delay(2500);
-		  clrscr();
-	  }
-	  /*LoRa_set_mode(&hspi1,sleep_mode);
-	  HAL_Delay(10);
-	  LoRa_set_mode(&hspi1,stdby_mode);*/
-	  toggle_pins(&hspi1);
-	  LoRa_set_mode(&hspi1, rx_cont_mode);
-	  if(LoRa_read_reg(&hspi1, 0x12) & 0x40){
-		  LoRa_read_payload(&hspi1, rx_data);
-		  uart_buf_len = sprintf(uart_buf,"Message received: Bytes: %d, string: %s",LoRa_read_reg(&hspi1, 0x13), rx_data);
-		  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+	  if(battery <= 3.1 && low_battery){
+		  continue;
+	  }	else if(battery <= 3.1){
+		  low_battery = 1;
+		  strcpy(tx_data,"Battery low");
+		  transmit_data(&hspi1, tx_data);
+		  continue;
+	  } else {
+		  low_battery = 0;
+		  get_measurements(&hspi1,adc1,adc2,adc3,tx_data);
+		  transmit_data(&hspi1, tx_data);
+		  HAL_Delay(10000);
 	  }
 
-	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -212,7 +178,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV64;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
@@ -235,6 +201,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 0 */
 
   ADC_MultiModeTypeDef multimode = {0};
+  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
   ADC_ChannelConfTypeDef sConfig = {0};
 
   /* USER CODE BEGIN ADC1_Init 1 */
@@ -244,7 +211,7 @@ static void MX_ADC1_Init(void)
   /** Common config
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.GainCompensation = 0;
@@ -268,6 +235,20 @@ static void MX_ADC1_Init(void)
   */
   multimode.Mode = ADC_MODE_INDEPENDENT;
   if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analog WatchDog 1
+  */
+  AnalogWDGConfig.WatchdogNumber = ADC_ANALOGWATCHDOG_1;
+  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
+  AnalogWDGConfig.Channel = ADC_CHANNEL_1;
+  AnalogWDGConfig.ITMode = ENABLE;
+  AnalogWDGConfig.HighThreshold = 3972;
+  AnalogWDGConfig.LowThreshold = 0;
+  AnalogWDGConfig.FilteringConfig = ADC_AWD_FILTERING_NONE;
+  if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -313,7 +294,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -327,54 +308,6 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
-
-}
-
-/**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
 
 }
 
@@ -394,34 +327,28 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, CSAG_Pin|CS_LoRa_Pin|RST_LoRa_Pin|CSADC1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA, CSAG_Pin|CS_LoRa_Pin|CSADC1_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, TX_Pin|RX_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin|RX_Pin|TX_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, CSADC3_Pin|CSADC2_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : CSAG_Pin CS_LoRa_Pin TX_Pin RST_LoRa_Pin
-                           CSADC1_Pin RX_Pin */
-  GPIO_InitStruct.Pin = CSAG_Pin|CS_LoRa_Pin|TX_Pin|RST_LoRa_Pin
-                          |CSADC1_Pin|RX_Pin;
+  /*Configure GPIO pins : CSAG_Pin CS_LoRa_Pin RST_LoRa_Pin RX_Pin
+                           TX_Pin CSADC1_Pin */
+  GPIO_InitStruct.Pin = CSAG_Pin|CS_LoRa_Pin|RST_LoRa_Pin|RX_Pin
+                          |TX_Pin|CSADC1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DEN_Acc_Pin INT1_Pin INT2_Pin */
-  GPIO_InitStruct.Pin = DEN_Acc_Pin|INT1_Pin|INT2_Pin;
+  /*Configure GPIO pins : DEN_Pin PB6 */
+  GPIO_InitStruct.Pin = DEN_Pin|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : DIO0_Pin */
-  GPIO_InitStruct.Pin = DIO0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : CSADC3_Pin CSADC2_Pin */
   GPIO_InitStruct.Pin = CSADC3_Pin|CSADC2_Pin;
@@ -431,19 +358,56 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
-  HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin,GPIO_PIN_SET);
 /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-void clrscr(){
-  	 uart_buf_len = sprintf(uart_buf,"%c[2J",ESC);
-  	 HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
-  }
-void gotoxy(uint8_t x, uint8_t y){
-  uart_buf_len = sprintf(uart_buf,"%c[%d;%dH",ESC,y + 1,x + 1);
-  HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
+float read_battery(ADC_HandleTypeDef *hadc){
+	uint16_t adc_read;
+	HAL_ADC_Start(hadc);
+	HAL_ADC_PollForConversion(hadc,HAL_MAX_DELAY);
+	adc_read = HAL_ADC_GetValue(hadc);
+
+	return (float)(adc_read*3.3)/4096;
 }
+
+void transmit_data(SPI_HandleTypeDef* spi, char* data){
+	  uint8_t i = 1;
+	  uint8_t addr = RegIrqFlags;
+	  LoRa_set_mode(spi,stdby_mode);
+	  HAL_Delay(100);
+
+	  while(i){
+		  LoRa_fill_fifo(spi, data, strlen(data));
+		  LoRa_set_mode(spi, tx_mode);
+		  HAL_Delay(50);
+		  if(LoRa_read_reg(spi, addr) & 0x08){
+			  LoRa_write_reg(spi,addr,0x08);
+			  HAL_Delay(10);
+		  }
+		  i--;
+		  HAL_Delay(2500);
+	  }
+	  LoRa_set_mode(spi,sleep_mode);
+	  HAL_Delay(100);
+}
+
+void get_measurements(SPI_HandleTypeDef* spi, adc_t adcx, adc_t adcy, adc_t adcz, char* data){
+	  double tilt = 0;
+	  uint16_t adcValx, adcValy, adcValz = 0;
+	  float volx, voly, volz = 0.0;
+
+	  tilt = getTilt(spi);
+
+	  adcValx = LTC2452_Read(spi, adcx);
+	  adcValy = LTC2452_Read(spi, adcy);
+	  adcValz= LTC2452_Read(spi, adcz);
+	  volx = convVol2(adcValx,3.3);
+	  voly = convVol2(adcValy,3.3);
+	  volz = convVol(adcValz,3.3);
+	  sprintf(data,"volx: %4.3f \n\rvoly: %4.3f \n\rvolz: %4.3f \n\rTilt: %4.2f",volx, voly, volz, tilt);
+}
+
 /* USER CODE END 4 */
 
 /**

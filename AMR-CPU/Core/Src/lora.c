@@ -80,12 +80,10 @@ void LoRa_fill_fifo(SPI_HandleTypeDef* spi, uint8_t* data, uint8_t bytes) {
  * Sets device modes. See header for different modes
  */
 void LoRa_set_mode(SPI_HandleTypeDef* spi, int8_t mode) {
-	uint8_t addr;
+	uint8_t addr = RegOpMode;
 	uint8_t read;
 	uint8_t data;
 
-
-	addr = RegOpMode;
 	read = LoRa_read_reg(spi, addr);
 
 	data = (read & 0xF8) | mode;
@@ -130,6 +128,8 @@ void LoRa_init(SPI_HandleTypeDef* spi) {
 	//crc
 	read = LoRa_read_reg(spi, RegModemConfig1) | 0x02;
 	LoRa_write_reg(spi, RegModemConfig1, read);
+
+	LoRa_set_mode(spi, sleep_mode);
 }
 
 void LoRa_read_payload(SPI_HandleTypeDef* spi, char *data) {

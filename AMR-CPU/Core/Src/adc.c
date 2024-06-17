@@ -9,8 +9,10 @@
 void ADC_Init(adc_t* adc1, adc_t* adc2, adc_t* adc3){
 	adc1->Port = GPIOA;
 	adc1->Pin = CSADC1_Pin;
+
 	adc2->Port = GPIOB;
 	adc2->Pin = CSADC2_Pin;
+
 	adc3->Port = GPIOB;
 	adc3->Pin = CSADC3_Pin;
 }
@@ -30,7 +32,9 @@ uint16_t LTC2452_Read(SPI_HandleTypeDef* spi, adc_t adc) {
 }
 
 float convVol(uint16_t adcvalue, float v_ref){
-  float v_in;
-  v_in = ((adcvalue - 32768)*v_ref)/32768;
-  return v_in;
+  //return (signed)((adcvalue - 32768)*v_ref) >> 15;
+  return ((adcvalue - 32768)*v_ref)/32768;
+}
+float convVol2(uint16_t adcvalue, float v_ref){
+  return (adcvalue*v_ref)/32768;
 }

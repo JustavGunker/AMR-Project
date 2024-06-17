@@ -61,26 +61,20 @@ void Error_Handler(void);
 #define CSAG_GPIO_Port GPIOA
 #define CS_LoRa_Pin GPIO_PIN_4
 #define CS_LoRa_GPIO_Port GPIOA
-#define DEN_Acc_Pin GPIO_PIN_0
-#define DEN_Acc_GPIO_Port GPIOB
-#define TX_Pin GPIO_PIN_8
-#define TX_GPIO_Port GPIOA
-#define RST_LoRa_Pin GPIO_PIN_9
+#define DEN_Pin GPIO_PIN_0
+#define DEN_GPIO_Port GPIOB
+#define RST_LoRa_Pin GPIO_PIN_8
 #define RST_LoRa_GPIO_Port GPIOA
-#define DIO0_Pin GPIO_PIN_10
-#define DIO0_GPIO_Port GPIOA
+#define RX_Pin GPIO_PIN_9
+#define RX_GPIO_Port GPIOA
+#define TX_Pin GPIO_PIN_10
+#define TX_GPIO_Port GPIOA
 #define CSADC1_Pin GPIO_PIN_11
 #define CSADC1_GPIO_Port GPIOA
-#define RX_Pin GPIO_PIN_12
-#define RX_GPIO_Port GPIOA
 #define CSADC3_Pin GPIO_PIN_4
 #define CSADC3_GPIO_Port GPIOB
 #define CSADC2_Pin GPIO_PIN_5
 #define CSADC2_GPIO_Port GPIOB
-#define INT1_Pin GPIO_PIN_6
-#define INT1_GPIO_Port GPIOB
-#define INT2_Pin GPIO_PIN_7
-#define INT2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
