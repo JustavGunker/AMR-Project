@@ -62,16 +62,6 @@ float get_magx(SPI_HandleTypeDef* spi,adc_t adc){
 
 	return mag;
 }
-float get_magz(SPI_HandleTypeDef* spi,adc_t adc){
-	uint16_t adc_value;
-	float vol, mag;
-
-	adc_value = LTC2452_Read(spi, adc);
-	vol = convVol2(adc_value,3.3);
-	mag = ((vol-1.560)-0.266)*165.4135338;
-
-	return mag;
-}
 
 
 float get_magy(SPI_HandleTypeDef* spi,adc_t adc){
@@ -84,6 +74,19 @@ float get_magy(SPI_HandleTypeDef* spi,adc_t adc){
 
 	return mag;
 }
+
+float get_magz(SPI_HandleTypeDef* spi,adc_t adc){
+	uint16_t adc_value;
+	float vol, mag;
+
+	adc_value = LTC2452_Read(spi, adc);
+	vol = convVol2(adc_value,3.3);
+	mag = ((vol-1.560)-0.266)*165.4135338;
+
+	return mag;
+}
+
+
 
 
 

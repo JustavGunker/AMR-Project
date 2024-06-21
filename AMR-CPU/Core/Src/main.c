@@ -112,12 +112,12 @@ int main(void)
   HAL_GPIO_WritePin(GPIOA, TX_Pin, GPIO_PIN_SET);  // Enable TX path
   HAL_GPIO_WritePin(GPIOA, RX_Pin,GPIO_PIN_RESET); // Disable RX path
 
-
-
   char tx_data[100];
   float battery;
   uint8_t low_battery = 0;
+  uint8_t first = 1; // To check for first measurement to bypass delay in first while loop
 
+  // Initialize delay
   uint32_t tickstart = HAL_GetTick();
   uint32_t wait = 1500; // Time to wait between each measurement + transmission
   /* Add a freq to guarantee minimum wait */
@@ -134,22 +134,30 @@ int main(void)
   {
 	  battery = read_battery(&hadc1);
 
-	  if(battery < 1 && low_battery){
+	  if(battery < 1.0 && low_battery){
 		  break;
-	  }	else if(battery < 1){
+	  }	else if(battery < 1.0){
 		  low_battery = 1;
 		  strcpy(tx_data, "");
 		  sprintf(tx_data,"Battery low");
 		  transmit_data(&hspi1, tx_data);
 		  break;
-	  } else if(!((HAL_GetTick() - tickstart) < wait)){
+	  } else if(!((HAL_GetTick() - tickstart) < wait) || first){
+		  if(first){
+			  first = 0;
+			  HAL_Delay(1000);
+		  }
+
 		  low_battery = 0;
 		  // Set reset of AMR-sensors
 		  HAL_GPIO_WritePin(GPIOA, AMR_RESET_Pin,GPIO_PIN_SET);
 		  HAL_GPIO_WritePin(GPIOA, AMR_RESET_Pin,GPIO_PIN_RESET);
 
+		  // Sensor measurements, calculations and transmission of data
 		  get_measurements(&hspi1,adc3,adc2,adc1,tx_data);
 		  transmit_data(&hspi1, tx_data);
+
+		  // Restart delay
 		  tickstart = HAL_GetTick();
 		  wait = 1500;
 		  if (wait < HAL_MAX_DELAY){
@@ -425,7 +433,6 @@ void get_measurements(SPI_HandleTypeDef* spi, adc_t adcx, adc_t adcy, adc_t adcz
 	  vol3 = convVol2(adcval3,3.3);
 
 	  sprintf(data,"Volx: %4.3f\n\rX: %4.3f %cT\n\rVoly: %4.3f\n\rY: %4.3f %cT\n\rVolz: %4.3f\n\rZ: %4.3f %cT\n\rTilt: %4.2f%c",vol1,magx,0xE6,vol2, magy,0xE6, vol3,magz,0xE6,tilt, 0xA7);
-	  //sprintf(data,"X: %4.3f V\n\rY: %4.3f V\n\rZ: %4.3f V\n\rTilt: %4.2f%c",vol1,vol2,vol3,tilt, 0xA7);
 }
 
 /* USER CODE END 4 */
