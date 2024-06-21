@@ -54,7 +54,7 @@ void LSM9DS1_Write(SPI_HandleTypeDef* spi,uint8_t reg, uint8_t data) {
   	  return input;
     }
 
-  double getTilt(SPI_HandleTypeDef* spi){
+  double get_tilt(SPI_HandleTypeDef* spi){
 	  float acc_ref = 1.0;
 	  int16_t accArray[3];
 	  LSM9DS1_Read_Acceleration(spi, accArray);

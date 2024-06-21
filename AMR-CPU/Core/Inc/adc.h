@@ -20,5 +20,9 @@ void ADC_Init(adc_t* adc1, adc_t* adc2, adc_t* adc3);
 uint16_t LTC2452_Read(SPI_HandleTypeDef* spi, adc_t adc);
 float convVol(uint16_t adcvalue, float v_ref);
 float convVol2(uint16_t adcvalue, float v_ref);
+float vol2uTesla(float voltage);
+float get_magx(SPI_HandleTypeDef* spi,adc_t adc);
+float get_magz(SPI_HandleTypeDef* spi,adc_t adc);
+float get_magy(SPI_HandleTypeDef* spi,adc_t adc);
 
 #endif /* INC_ADC_H_ */

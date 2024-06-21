@@ -27,7 +27,7 @@ uint8_t LSM9DS1_Read(SPI_HandleTypeDef* spi,uint8_t reg);
 void LSM9DS1_Init(SPI_HandleTypeDef* spi);
 void LSM9DS1_Read_Acceleration(SPI_HandleTypeDef* spi, int16_t* accArray);
 float convAcc(int16_t accvalue, float acc_ref);
-double getTilt(SPI_HandleTypeDef* spi);
+double get_tilt(SPI_HandleTypeDef* spi);
 
 
 

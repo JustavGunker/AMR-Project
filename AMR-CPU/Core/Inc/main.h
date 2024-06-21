@@ -59,6 +59,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define CSAG_Pin GPIO_PIN_1
 #define CSAG_GPIO_Port GPIOA
+#define AMR_RESET_Pin GPIO_PIN_2
+#define AMR_RESET_GPIO_Port GPIOA
 #define CS_LoRa_Pin GPIO_PIN_4
 #define CS_LoRa_GPIO_Port GPIOA
 #define DEN_Pin GPIO_PIN_0

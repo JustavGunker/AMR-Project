@@ -113,10 +113,17 @@ int main(void)
   HAL_GPIO_WritePin(GPIOA, RX_Pin,GPIO_PIN_RESET); // Disable RX path
 
 
+
   char tx_data[100];
   float battery;
   uint8_t low_battery = 0;
 
+  uint32_t tickstart = HAL_GetTick();
+  uint32_t wait = 1500; // Time to wait between each measurement + transmission
+  /* Add a freq to guarantee minimum wait */
+  if (wait < HAL_MAX_DELAY){
+  	  wait += (uint32_t)(uwTickFreq);
+  	  }
 
 
   /* USER CODE END 2 */
@@ -127,18 +134,27 @@ int main(void)
   {
 	  battery = read_battery(&hadc1);
 
-	  if(battery <= 3.1 && low_battery){
-		  continue;
-	  }	else if(battery <= 3.1){
+	  if(battery < 1 && low_battery){
+		  break;
+	  }	else if(battery < 1){
 		  low_battery = 1;
-		  strcpy(tx_data,"Battery low");
+		  strcpy(tx_data, "");
+		  sprintf(tx_data,"Battery low");
 		  transmit_data(&hspi1, tx_data);
-		  continue;
-	  } else {
+		  break;
+	  } else if(!((HAL_GetTick() - tickstart) < wait)){
 		  low_battery = 0;
-		  get_measurements(&hspi1,adc1,adc2,adc3,tx_data);
+		  // Set reset of AMR-sensors
+		  HAL_GPIO_WritePin(GPIOA, AMR_RESET_Pin,GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(GPIOA, AMR_RESET_Pin,GPIO_PIN_RESET);
+
+		  get_measurements(&hspi1,adc3,adc2,adc1,tx_data);
 		  transmit_data(&hspi1, tx_data);
-		  HAL_Delay(10000);
+		  tickstart = HAL_GetTick();
+		  wait = 1500;
+		  if (wait < HAL_MAX_DELAY){
+			  wait += (uint32_t)(uwTickFreq);
+			  }
 	  }
 
     /* USER CODE END WHILE */
@@ -330,15 +346,15 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, CSAG_Pin|CS_LoRa_Pin|CSADC1_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, RST_LoRa_Pin|RX_Pin|TX_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, AMR_RESET_Pin|RST_LoRa_Pin|RX_Pin|TX_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, CSADC3_Pin|CSADC2_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : CSAG_Pin CS_LoRa_Pin RST_LoRa_Pin RX_Pin
-                           TX_Pin CSADC1_Pin */
-  GPIO_InitStruct.Pin = CSAG_Pin|CS_LoRa_Pin|RST_LoRa_Pin|RX_Pin
-                          |TX_Pin|CSADC1_Pin;
+  /*Configure GPIO pins : CSAG_Pin AMR_RESET_Pin CS_LoRa_Pin RST_LoRa_Pin
+                           RX_Pin TX_Pin CSADC1_Pin */
+  GPIO_InitStruct.Pin = CSAG_Pin|AMR_RESET_Pin|CS_LoRa_Pin|RST_LoRa_Pin
+                          |RX_Pin|TX_Pin|CSADC1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -372,40 +388,44 @@ float read_battery(ADC_HandleTypeDef *hadc){
 }
 
 void transmit_data(SPI_HandleTypeDef* spi, char* data){
-	  uint8_t i = 1;
 	  uint8_t addr = RegIrqFlags;
 	  LoRa_set_mode(spi,stdby_mode);
-	  HAL_Delay(100);
+	  HAL_Delay(10);
 
-	  while(i){
-		  LoRa_fill_fifo(spi, data, strlen(data));
-		  LoRa_set_mode(spi, tx_mode);
-		  HAL_Delay(50);
-		  if(LoRa_read_reg(spi, addr) & 0x08){
-			  LoRa_write_reg(spi,addr,0x08);
-			  HAL_Delay(10);
-		  }
-		  i--;
-		  HAL_Delay(2500);
+	  LoRa_fill_fifo(spi, data, strlen(data));
+	  LoRa_set_mode(spi, tx_mode);
+	  HAL_Delay(10);
+	  if(LoRa_read_reg(spi, addr) & 0x08){
+		  LoRa_write_reg(spi,addr,0x08);
+		  HAL_Delay(10);
 	  }
+	  HAL_Delay(10);
 	  LoRa_set_mode(spi,sleep_mode);
-	  HAL_Delay(100);
+	  HAL_Delay(10);
 }
 
 void get_measurements(SPI_HandleTypeDef* spi, adc_t adcx, adc_t adcy, adc_t adcz, char* data){
 	  double tilt = 0;
-	  uint16_t adcValx, adcValy, adcValz = 0;
-	  float volx, voly, volz = 0.0;
+	  float magx, magy, magz = 0.0;
+	  float vol1, vol2, vol3;
+	  uint16_t adcval1, adcval2, adcval3;
 
-	  tilt = getTilt(spi);
+	  tilt = get_tilt(spi);
 
-	  adcValx = LTC2452_Read(spi, adcx);
-	  adcValy = LTC2452_Read(spi, adcy);
-	  adcValz= LTC2452_Read(spi, adcz);
-	  volx = convVol2(adcValx,3.3);
-	  voly = convVol2(adcValy,3.3);
-	  volz = convVol(adcValz,3.3);
-	  sprintf(data,"volx: %4.3f \n\rvoly: %4.3f \n\rvolz: %4.3f \n\rTilt: %4.2f",volx, voly, volz, tilt);
+	  magx = get_magx(spi, adcx);
+	  magy = get_magy(spi,adcy);
+	  magz = get_magz(spi,adcz);
+
+	  adcval1 = LTC2452_Read(spi, adcx);
+	  adcval2 = LTC2452_Read(spi, adcy);
+	  adcval3 = LTC2452_Read(spi, adcz);
+
+	  vol1 = convVol(adcval1,3.3);
+	  vol2 = convVol2(adcval2,3.3);
+	  vol3 = convVol2(adcval3,3.3);
+
+	  sprintf(data,"Volx: %4.3f\n\rX: %4.3f %cT\n\rVoly: %4.3f\n\rY: %4.3f %cT\n\rVolz: %4.3f\n\rZ: %4.3f %cT\n\rTilt: %4.2f%c",vol1,magx,0xE6,vol2, magy,0xE6, vol3,magz,0xE6,tilt, 0xA7);
+	  //sprintf(data,"X: %4.3f V\n\rY: %4.3f V\n\rZ: %4.3f V\n\rTilt: %4.2f%c",vol1,vol2,vol3,tilt, 0xA7);
 }
 
 /* USER CODE END 4 */
