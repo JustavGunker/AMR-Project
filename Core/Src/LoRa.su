@@ -1,8 +1,0 @@
-../Core/Src/lore.c:10:6:LoRa_reset	8	static
-../Core/Src/lore.c:21:6:LoRa_write_reg	24	static
-../Core/Src/lore.c:36:9:LoRa_read_reg	32	static
-../Core/Src/lore.c:55:6:LoRa_fill_fifo	32	static
-../Core/Src/lore.c:81:6:LoRa_set_mode	24	static
-../Core/Src/lore.c:110:6:LoRa_init	24	static
-../Core/Src/lore.c:144:6:LoRa_read_payload	40	static
-../Core/Src/lore.c:189:6:toggle_pins	16	static
