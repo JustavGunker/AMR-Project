@@ -134,9 +134,9 @@ int main(void)
   {
 	  battery = read_battery(&hadc1);
 
-	  if(battery < 1.0 && low_battery){
+	  if(battery < 3.1 && low_battery){
 		  break;
-	  }	else if(battery < 1.0){
+	  }	else if(battery < 3.1){
 		  low_battery = 1;
 		  strcpy(tx_data, "");
 		  sprintf(tx_data,"Battery low");
