@@ -1,0 +1,11 @@
+../Core/Src/main.c:90:5:main	2
+../Core/Src/main.c:276:6:SystemClock_Config	3
+../Core/Src/main.c:317:13:MX_SPI1_Init	2
+../Core/Src/main.c:357:13:MX_USART2_UART_Init	5
+../Core/Src/main.c:405:13:MX_GPIO_Init	1
+../Core/Src/main.c:439:6:clrscr	1
+../Core/Src/main.c:444:6:gotoxy	1
+../Core/Src/main.c:449:6:uart_read	4
+../Core/Src/main.c:466:6:enter_lpr_mode	1
+../Core/Src/main.c:470:6:exit_lpr_mode	2
+../Core/Src/main.c:487:6:Error_Handler	1
